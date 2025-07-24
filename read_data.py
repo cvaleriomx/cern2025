@@ -1,5 +1,9 @@
 import os
 import csv
+import matplotlib
+#import tkinter as tk
+
+matplotlib.use('TkAgg')  # o 'Qt5Agg' si prefieres
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
@@ -8,7 +12,21 @@ import sys
 #import semgrid as sg
 import scipy.stats
 import scipy.special
+from scipy.optimize import curve_fit
+
 import json
+
+from scipy import special
+fits = {"mu":-1.5, "sig": 7.5, "Am": -0.125, "A0":0.25, "title":"LEFT-RIGHT ITL.SLH01 - ITL.SOL01=80A"}    
+mu=2
+sig=4
+import matplotlib.pyplot as plt
+x = np.linspace(-30, 30,200)
+plt.plot(x,scipy.special.erf((x-mu)/sig))
+plt.xlabel('$x$')
+plt.ylabel('$erf(x)$')
+plt.show()
+
 
 def find_dict_with_key_value(items, key_name, value):
     for item in items:
@@ -22,11 +40,12 @@ def read_json_file(file_path):
         data = json.load(file)
     return data
 
-def plot_individual(traces):
+def plot_individual(traces,x_axis):
+            
             fig = plt.figure() 
             ax = fig.add_subplot(111)
             #ax.plot(range(500), traces.T[:,1]) 
-            mediciones = traces[23]  # Esto tiene forma (3, 500)
+            mediciones = traces[12]  # Esto tiene forma (3, 500)
             #mediciones2 = traces[44]  # Esto tiene forma (3, 500)
             # Graficar cada medición
             for i in range(3):
@@ -56,12 +75,12 @@ def plot_individual(traces):
             traces_std2 = np.std(traces_av[:, 340:360], axis=1)        # (45,)
 
             # Plot lines
-            axs[1].plot(range(len(traces_av_av2)), traces_av_av, label='Avg 180–200')
-            axs[1].plot(range(len(traces_av_av2)), traces_av_av2, label='Avg 340–360')
+            axs[1].plot(x_axis, traces_av_av, label='Avg 180–200')
+            axs[1].plot(x_axis, traces_av_av2, label='Avg 340–360')
 
             # Plot scatter points with error bars
             axs[1].errorbar(
-                range(len(traces_av_av2)),
+                x_axis,
                 traces_av_av2,
                 yerr=traces_std2,
                 fmt='o',
@@ -69,7 +88,7 @@ def plot_individual(traces):
                 
             )
             axs[1].errorbar(
-                range(len(traces_av_av)),
+                x_axis,
                 traces_av_av,
                 yerr=traces_std,
                 fmt='o',
@@ -97,16 +116,20 @@ def read_file(filename):
         if dd["type"]=="record" and dd["class"]=="oasis":
             traces = np.array(dd["data"])                      # data (for oasis) is in form of scan_step, meas_per_step, pts_traces
             print(traces.shape,filename)
-            plot_individual(traces)  # Plot individual traces
+            #plot_individual(traces,x_axis)  # Plot individual traces
             
             traces_av = np.average(traces, axis=1)
             #traces_av_av = np.average(traces_av[:,200:350], axis=1) 
-            traces_av_av = np.average(traces_av[:,200:350], axis=1) 
+            traces_av_av = np.average(traces_av[:,200:220], axis=1) 
 
     return(x_axis, traces_av_av)
 
 def erf2(x, mu, sig):
-    val = scipy.special.erf((x-mu)/sig)+1.0
+    val = scipy.special.erf((x-mu)/sig)
+    return(val)
+
+def erf21(x, mu, sig):
+    val = scipy.special.erf((x-mu)/sig)+1
     return(val)
 
 def plot_meas(scan_data):
@@ -116,7 +139,7 @@ def plot_meas(scan_data):
     ax.plot(sd["RIGHT_X_2"], sd["RIGHT_V_2"])
     if sd.get("mu") is not None:
         xxx = np.linspace(-20.0, 20.0, 100)
-        yyy = sd["Am"]*erf2(xxx, sd["mu"], sd["sig"])+sd["A0"]
+        yyy = sd["Am"]*erf21(xxx, sd["mu"], sd["sig"])+sd["A0"]
         ax.plot(xxx, yyy)
     if sd.get("title") is not None:
         ax.set_title(sd["title"])
@@ -124,80 +147,65 @@ def plot_meas(scan_data):
     ax.set_xlabel("ITL.SLH01 - Position (mm)")
     fig.show()
 
-# First dataset
-filenames = [
-    "scanrecord_data_2025-04-22-09-23-41_ITL_SLH01_LEFT_SOL_70A.json",
-    "scanrecord_data_2025-04-22-10-16-09_ITL_SLH01_RIGHT_SOL_70A.json",
-    "scanrecord_data_2025-04-22-10-51-33_ITL_SLH01_LEFT_SOL_75A.json",
-    "scanrecord_data_2025-04-22-10-44-05_ITL_SLH01_RIGHT_SOL_75A.json",
-    "scanrecord_data_2025-04-22-09-32-05_ITL_SLH01_LEFT_SOL_80A.json",
-    "scanrecord_data_2025-04-22-10-25-08_ITL_SLH01_RIGHT_SOL_80A.json",
-    "scanrecord_data_2025-04-22-09-39-17_ITL_SLH01_LEFT_SOL_90A.json",
-    "scanrecord_data_2025-04-22-10-37-08_ITL_SLH01_RIGHT_SOL_90A.json", 
-    "scanrecord_data_2025-04-22-21-37-32_ITL_SLH01_LEFT_SOL_70A.json",
-    "scanrecord_data_2025-04-22-21-41-29_ITL_SLH01_RIGHT_SOL_70A.json", 
-]
-BASE = "/Users/cvalerio/work1/cern_2025/richard_data/"
-d_list = [ {"LEFT_F": BASE+filenames[ii*2], "RIGHT_F": BASE+filenames[ii*2+1]} for ii in range(int(len(filenames)*0.5)) ]
 
-for dd in d_list:
-    xx, V = read_file(dd["LEFT_F"])
-    dd["LEFT_X"] = xx
-    dd["LEFT_V"] = V
-    xx, V = read_file(dd["RIGHT_F"])
-    dd["RIGHT_X"] = xx
-    dd["RIGHT_V"] = V
-    dd["MAX_V"] = 0.5*(dd["LEFT_V"][0]+dd["RIGHT_V"][-1])  # Average the "full out values" to get the max intensity
-    V2 = [ dd["MAX_V"]-VV for VV in dd["RIGHT_V"] ]        # 
-    dd["RIGHT_V_2"] = V2
-    dd["RIGHT_X_2"] = [ x2-5.5 for x2 in dd["RIGHT_X"] ]
-
-# Plot the results
-fits = {"mu":-8.5, "sig": 8.0, "Am": -0.16, "A0":0.32, "title":"LEFT-RIGHT ITL.SLH01 - ITL.SOL01=70A"}    
-d_list[0].update(fits)
-fits = {"mu":-4.5, "sig": 6.0, "Am": -0.15, "A0":0.3, "title":"LEFT-RIGHT ITL.SLH01 - ITL.SOL01=75A"}    
-d_list[1].update(fits)
-fits = {"mu":-1.5, "sig": 7.5, "Am": -0.125, "A0":0.25, "title":"LEFT-RIGHT ITL.SLH01 - ITL.SOL01=80A"}    
-d_list[2].update(fits)
-fits = {"mu":-2.5, "sig": 8.0, "Am": -0.05, "A0":0.1, "title":"LEFT-RIGHT ITL.SLH01 - ITL.SOL01=90A"}    
-d_list[3].update(fits)
-fits = {"mu":-7.5, "sig": 6.0, "Am": -0., "A0":0.0, "title":"LEFT-RIGHT ITL.SLH01 - ITL.SOL01=70.9A"}    
-d_list[4].update(fits)
-for dd in d_list:
-    plot_meas(dd) 
-
-# Second dataset
 filenames = [
     "scanrecord_data_2025-04-28-11-10-19_ITL_SLH01_LEFT_SOL_70A.json",
     "scanrecord_data_2025-04-28-11-18-17_ITL_SLH01_RIGHT_SOL_70A.json",
     "scanrecord_data_2025-04-28-11-46-08_ITL_SLH01_LEFT_SOL_75.json",
     "scanrecord_data_2025-04-28-11-25-08_ITL_SLH01_RIGHT_SOL_75.json",
 ]
-BASE = "/Users/cvalerio/work1/cern_2025/richard_data/"
+BASE = ""
 d_list = [ {"LEFT_F": BASE+filenames[ii*2], "RIGHT_F": BASE+filenames[ii*2+1]} for ii in range(int(len(filenames)*0.5)) ]
 
 for dd in d_list:
-    xx, V = read_file(dd["LEFT_F"])
-    dd["LEFT_X"] = xx
-    dd["LEFT_V"] = V
+    xxl, VL = read_file(dd["LEFT_F"])
+    dd["LEFT_X"] = xxl
+    dd["LEFT_V"] = VL
     xx, V = read_file(dd["RIGHT_F"])
     dd["RIGHT_X"] = xx
     dd["RIGHT_V"] = V
-    dd["MAX_V"] = 0.5*(dd["LEFT_V"][0]+dd["RIGHT_V"][-1])  # Average the "full out values" to get the max intensity
+    dd["MAX_V"] = 0.5*(dd["LEFT_V"][0]+dd["RIGHT_V"][-1])  # Average the "full out values" to get the max intensit
+
+    print("max",dd["MAX_V"])
+    
     V2 = [ dd["MAX_V"]-VV for VV in dd["RIGHT_V"] ]        # 
+
+    V2R = [ VV/dd["MAX_V"] for VV in dd["RIGHT_V"] ]        
+    V2L = [ -VV/dd["MAX_V"] for VV in dd["LEFT_V"] ]        
+
+    # 
     dd["RIGHT_V_2"] = V2
-    dd["RIGHT_X_2"] = [ x2-6.0 for x2 in dd["RIGHT_X"] ]
-
-# Plot the results
-
-
-
-
-fits = {"mu":-8.5, "sig": 8.0, "Am": -0.0, "A0":0.0, "title":"LEFT-RIGHT ITL.SLH01 - ITL.SOL01=70A"}    
+    dd["RIGHT_X_2"] = [ x2 for x2 in dd["RIGHT_X"] ]
+    dd["RIGHT_X_2"] = [ x2 for x2 in dd["RIGHT_X"] ]
+    fig, ax = plt.subplots()
+    ax.scatter(dd["RIGHT_X_2"],V2R)
+    ax.scatter(dd["LEFT_X"],V2L)
+    ax.set_title("right x2 v2")
+    
+    popt, pcov = curve_fit(erf2, xx, V2R, p0=[-1.0, 4.0])  # p0 son valores iniciales para mu y sig
+    # Parámetros ajustados
+    mu_fit, sig_fit = popt
+    print("Parámetros ajustados:")
+    print("mu =", mu_fit)
+    print("sig =", sig_fit)
+    x_fit = np.linspace(min(xx), max(xx), 500)
+    y_fit = erf2(x_fit, mu_fit, sig_fit)
+    ax.plot(x_fit, y_fit, '-', label=f'Ajuste erf2: mu={mu_fit:.2f}, sig={sig_fit:.2f}')
+    x_check = np.linspace(-20, 20, 500)
+    ax.plot(x_check, erf2(x_check, mu_fit, sig_fit), 'o', label='Datos originales')
+    #ax.plot(xx, erf2(xx, mu_fit,sig_fit))
+    #, 'g--', label='fit: a=%5.3f, b=%5.3f, c=%5.3f' % tuple(popt))
+    #ax.plot(xx, erf2(xx, *popt), color='red', label='Ajuste')
+fits = {"mu":-1.5, "sig": 16.0, "Am": -0.16, "A0":0.30, "title":"LEFT-RIGHT ITL.SLH01 - ITL.SOL01=70A"}    
 d_list[0].update(fits)
-fits = {"mu":-4.5, "sig": 6.0, "Am": -0.0, "A0":0.0, "title":"LEFT-RIGHT ITL.SLH01 - ITL.SOL01=75A"}    
+fits = {"mu":-4.5, "sig": 16.0, "Am": -0.16, "A0":0.30, "title":"LEFT-RIGHT ITL.SLH01 - ITL.SOL01=75A"}    
 d_list[1].update(fits)
 
 for dd in d_list:
     plot_meas(dd) 
 plt.show()  # Show all plots at once
+
+
+
+
+
