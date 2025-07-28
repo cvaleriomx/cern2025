@@ -54,22 +54,73 @@ def plot_individual(traces,x_axis):
             mediciones = traces[6]  # Esto tiene forma (3, 500)
             #mediciones2 = traces[44]  # Esto tiene forma (3, 500)
             # Graficar cada medición
-            for i in range(3):
-                #plt.figure()
-                plt.plot(mediciones[i])
+            #for i in range(6):
+            
+            #    plt.plot(mediciones[i])
                 #plt.plot(mediciones2[i])
 
-                plt.title(f"step {23}")
-                plt.xlabel("Índice de dato")
-                plt.ylabel("Valor")
+            #    plt.title(f"step {23}")
+            #    plt.xlabel("Índice de dato")
+            #    plt.ylabel("Valor")
+            #    plt.grid(True)
+            
+            n_pasos = traces.shape[0]
+            n_values= traces.shape[1]  # Número de mediciones por paso
+            n_puntos = traces.shape[2]
+ 
+
+            # Inicializar arreglo vacío para guardar los nuevos promedios
+            if n_values > 3:
+                traces_filtrados = np.empty((n_pasos, n_values-2, n_puntos))  # guardará los valores sin min/max
+                traces_av = np.empty((n_pasos, n_puntos))
+                for i in range(n_pasos):         # por cada paso
+                    for j in range(n_puntos):     # por cada punto
+                        valores = np.sort(traces[i, :, j])[1:-1]  # quitar min y max → 5 valores
+                        traces_filtrados[i, :, j] = valores
+
+                # Para cada paso
+                for i in range(n_pasos):
+                    # Para cada punto
+                    for j in range(n_puntos):
+                        valores = traces[i, :, j]         # 7 mediciones en ese punto
+                        valores_filtrados = np.sort(valores)[1:-1]  # quitar mínimo y máximo (queda 5)
+                        traces_av[i, j] = np.mean(valores_filtrados)
+            else:
+                traces_av = np.average(traces, axis=1)
+
+            pasos_a_ver = [7, 8]
+
+            for paso in pasos_a_ver:
+                plt.figure(figsize=(10, 4))
+                
+                # Trazas originales (las 7 mediciones)
+                for k in range(traces_filtrados.shape[1]):
+                    #plt.plot(traces[paso, k, :], alpha=0.4, label=f'Medición {k+1}' if k == 0 else "")
+                    plt.plot(traces_filtrados[paso, k, :], alpha=0.4, label=f'Measurements {k+1}' if k == 0 else "")
+                
+                # Promedio sin extremos
+                #timeaux= np.arange(0, 0.002.500)
+                plt.plot(traces_av[paso], color='black', linewidth=2, label='Average withou xtremes')
+                #time= np.arange(0, 500)  # Assuming 500 time points
+                #plt.title(f'Trace stepdel paso {paso + 1}')
+                plt.xlabel("Time (arbitrary units)")
+                plt.ylabel("Signal (V)")
+                plt.legend()
                 plt.grid(True)
-            
-            
+                plt.tight_layout()
+                plt.show()
             fig, axs = plt.subplots(2, 1, figsize=(10, 6))
-            traces_av = np.average(traces, axis=1)  # Shape: (45, 500)
-            traces_std = np.std(traces, axis=1)     # Shape: (45, 500), std across 3 measurements
+
+            #traces_av = np.average(traces, axis=1)  # Shape: (45, 500)
+            traces_std = np.std(traces_filtrados, axis=1)     # Shape: (45, 500), std across 3 measurements
+            
+            #bloques_por_paso = [traces[i] for i in range(43)]  # lista de 43 arrays (cada uno 7x500)
+
+            #promedios = np.mean(traces, axis=(1, 2))  # Promedia sobre ejes 1 y 2 → resultado (43,)
+            desviaciones = np.std(traces[:, :, 300:400], axis=(1, 2), ddof=1)  # Desviación estándar de cada bloque
+
             #print("largo",len(traces))
-            axs[0].plot(range(500), traces[11].T)  # Plot each averaged trace
+            axs[0].plot(range(500), traces_filtrados[11].T)  # Plot each averaged trace
 
             # --- Now for the second plot (average over time window) ---
             # Averages over time windows:
@@ -77,18 +128,21 @@ def plot_individual(traces,x_axis):
             traces_av_av2 = np.average(traces_av[:, 340:360], axis=1)  # (45,)
 
             # Error bars: std of time window 200:250 for each trace
-            traces_std = np.std(traces_av[:, 180:200], axis=1)        # (45,)
+            traces_std = np.std(traces_av[:, 240:300], axis=1)        # (45,)
+            traces_std = np.std(traces_filtrados[:, :, 240:300] , axis=(1, 2), ddof=1)  # shape: (43,)
+
             traces_std2 = np.std(traces_av[:, 340:360], axis=1)        # (45,)
 
             # Plot lines
-            axs[1].plot(x_axis, traces_av_av, label='Avg 180–200')
-            axs[1].plot(x_axis, traces_av_av2, label='Avg 340–360')
+            axs[1].plot(x_axis, traces_av_av, label='Avg 240–300')
+            axs[1].set_xlabel("Position (mm)")
+            #axs[1].plot(x_axis, traces_av_av2, label='Avg 340–360')
 
             # Plot scatter points with error bars
             axs[1].errorbar(
                 x_axis,
-                traces_av_av2,
-                yerr=traces_std2,
+                traces_av_av,
+                yerr=traces_std,
                 fmt='o',
                 capsize=3,
                 
@@ -122,7 +176,7 @@ def read_file(filename):
         if dd["type"]=="record" and dd["class"]=="oasis":
             traces = np.array(dd["data"])                      # data (for oasis) is in form of scan_step, meas_per_step, pts_traces
             print(traces.shape,filename)
-            #plot_individual(traces,x_axis)  # Plot individual traces
+           # plot_individual(traces,x_axis)  # Plot individual traces
             
             traces_av = np.average(traces, axis=1)
             #traces_av_av = np.average(traces_av[:,200:350], axis=1) 
@@ -176,13 +230,19 @@ filenames = [
     # "scanrecord_data_2025-07-24-10-30-20_LEFT_o2_sol_132.1.json",
    # "scanrecord_data_2025-07-24-10-36-48_RIGHT_o2_sol_132.1.json"
 ]
-filenames55 = [
+filenames = [
     "scanrecord_data_2025-07-25-14-39-16_LEFT_1.json",
     "scanrecord_data_2025-07-25-14-45-43_RIGHT_1.json",
     "scanrecord_data_2025-07-25-14-53-42_LEFT_2.json",
     "scanrecord_data_2025-07-25-14-58-47_RIGHT_2.json",
     "scanrecord_data_2025-07-25-15-07-53_LEFT_SLIT1_20mm.json",
     "scanrecord_data_2025-07-25-15-13-06_RIGHT_SLIT1_20mm.json",
+    "scanrecord_data_2025-07-25-15-22-40_LEFT_SLIT1_20mm_SLIT2_18.json",
+    "scanrecord_data_2025-07-25-15-29-03_RIGHT_SLIT1_20mm_SLIT2_18.json",
+    "scanrecord_data_2025-07-25-15-36-02_LEFT_SLIT1_10mm_SLIT2_18mm.json",
+    "scanrecord_data_2025-07-25-15-42-59_RIGTH_SLIT1_10mm_SLIT2_18mm.json"
+            ]
+filenames22 = [
     "scanrecord_data_2025-07-25-15-22-40_LEFT_SLIT1_20mm_SLIT2_18.json",
     "scanrecord_data_2025-07-25-15-29-03_RIGHT_SLIT1_20mm_SLIT2_18.json",
     "scanrecord_data_2025-07-25-15-36-02_LEFT_SLIT1_10mm_SLIT2_18mm.json",
@@ -237,14 +297,23 @@ d_list = [ {"LEFT_F": BASE+filenames[ii*2], "RIGHT_F": BASE+filenames[ii*2+1]} f
 for dd in d_list:
     xxl, VL = read_file(dd["LEFT_F"])
     xxR, VR = read_file(dd["RIGHT_F"])
-    xlof= [x +6  for x in xxl]
+    xxl2 = [ -x -6 for x in xxl ]  # Normalize to the first point
+    xlof= [x +1 for x in xxl]
     dd["MAX_V"] = 1*max( max(VL), max(VR)  )  # Average the "full out values" to get the max intensit
     VLM=2*(-VL/dd["MAX_V"] +0.5)
     VRM=2*(VR/dd["MAX_V"]-0.5)
     fig, ax = plt.subplots()
-    ax.plot(xlof, VLM, label=dd["LEFT_F"])
-    ax.plot(xxR, VRM, label=dd["RIGHT_F"])
-    plt.show()
+
+    ax.plot(xxl2, VL, label="LEFT_F")
+    ax.plot(xxR, VR, label="RIGHT_F")
+    ax.set_title(dd["LEFT_F"])
+    ax.legend()
+    
+    
+    
+    #ax.plot(xlof, VLM, label=dd["LEFT_F"])
+    #ax.plot(xxR, VRM, label=dd["RIGHT_F"])
+    #plt.show()
     dd["LEFT_V"] = VL/dd["MAX_V"]  # Normalized to the max value
     dd["RIGHT_V"] = VR/dd["MAX_V"]  # Normalized to the max value
     print("LEFT_V",dd["LEFT_V"])
@@ -271,9 +340,10 @@ for dd in d_list:
     dd["RIGHT_X_2"] = [ x2 for x2 in dd["RIGHT_X"] ]
     #fig, ax = plt.subplots()
     fig, axr = plt.subplots(2, 1, figsize=(10, 6))
-    axr[0].scatter(dd["RIGHT_X_2"],V2R)
-    axr[0].scatter(dd["LEFT_X"],V2L)
+    axr[0].scatter(dd["RIGHT_X_2"],V2R, label="RIGHT_F")
+    axr[0].scatter(dd["LEFT_X"],V2L, label="LEFT_F")
     axr[0].set_title(dd["LEFT_F"])
+    axr[0].legend()
     
     popt, pcov = curve_fit(erf2, xxR, V2R, p0=[-1.0, 4.0])  # p0 son valores iniciales para mu y sig
     # Parámetros ajustados
@@ -285,7 +355,7 @@ for dd in d_list:
     #print("sig =", sig_fit)
     x_fit = np.linspace(min(xxR), max(xxR), 500)
     y_fit = erf2(x_fit, mu_fitR, sig_fitR)
-    axr[0].plot(x_fit, y_fit, '-', label=f'Ajuste erf2: mu={mu_fitR:.2f}, sig={sig_fitR:.2f}')
+   # axr[0].plot(x_fit, y_fit, '-', label=f'Ajuste erf2: mu={mu_fitR:.2f}, sig={sig_fitR:.2f}')
     x_check = np.linspace(-20, 20, 500)
     # Fit for the left side
     popt, pcov = curve_fit(erf2, xlof, V2L, p0=[1.0, 4.0])  # p0 son valores iniciales para mu y sig
@@ -296,7 +366,7 @@ for dd in d_list:
     print("mu =L R ", mu_fitl,mu_fitR)
     print("siig L R =", sig_fitl, sig_fitR)
     sigmafitsL.append(sig_fitl)
-    axr[0].plot(x_check, erf2(x_check, mu_fitl, sig_fitl), 'o', label='Datos ajuste')
+    #axr[0].plot(x_check, erf2(x_check, mu_fitl, sig_fitl), 'o', label='Datos ajuste')
     
     xN1, yN = fusionar_y_promediar(dd["LEFT_X"], V2L, dd["RIGHT_X_2"],V2R, tol=1e-8)
     popt, pcov = curve_fit(erf2, xN1, yN, p0=[-1.0, 4.0])  # p0 son valores iniciales para mu y sig
@@ -305,8 +375,8 @@ for dd in d_list:
     mufitF.append(mu_fit)
     print("mu = Full", mu_fit)
     print("siig  Full=", sig_fit)
-    axr[1].plot(xN1, yN, 'o', label='Datos fusionados y promediados')
-    axr[1].plot(x_check, erf2(x_check, mu_fit, sig_fit), 'o', label='Datos ajuste')
+    axr[1].plot(xN1, yN, 'o', label='Average Data')
+    #axr[1].plot(x_check, erf2(x_check, mu_fit, sig_fit), 'o', label='Datos ajuste')
 
     axr[1].set_xlabel("ITL.SLH01 - Position (mm)")
     axr[1].set_ylabel("FCup Current (mA)")
@@ -315,7 +385,7 @@ for dd in d_list:
     print("sigmafits","Left","RIGHT","Full")
 
 
-    plt.show()
+    #plt.show()
 
 
     #ax.plot(xx, erf2(xx, mu_fit,sig_fit))
@@ -332,7 +402,6 @@ print("sigmafits","Left","RIGHT","Full","mu Left","mu Right","mu Full")
 for var in range(len(sigmafitsL)):
     print(var,sigmafitsL[var],sigmafitsR[var],sigmafits[var],mufitL[var],mufitR[var],mufitF[var])
 plt.show()  # Show all plots at once
-
 
 
 
