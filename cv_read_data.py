@@ -18,6 +18,11 @@ from scipy.optimize import curve_fit
 import json
 
 from scipy import special
+colores = [
+    'red', 'blue', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan',
+    'magenta', 'teal', 'navy', 'gold', 'darkred', 'darkgreen', 'indigo', 'lime', 'coral', 'darkblue',
+    'orchid', 'salmon', 'chocolate', 'maroon', 'turquoise'
+]
 fits = {"mu":-1.5, "sig": 7.5, "Am": -0.125, "A0":0.25, "title":"LEFT-RIGHT ITL.SLH01 - ITL.SOL01=80A"}    
 mu=2
 sig=4
@@ -51,24 +56,11 @@ def plot_individual(traces,x_axis):
             fig = plt.figure() 
             ax = fig.add_subplot(111)
             #ax.plot(range(500), traces.T[:,1]) 
-            mediciones = traces[6]  # Esto tiene forma (3, 500)
-            #mediciones2 = traces[44]  # Esto tiene forma (3, 500)
-            # Graficar cada medición
-            #for i in range(6):
-            
-            #    plt.plot(mediciones[i])
-                #plt.plot(mediciones2[i])
-
-            #    plt.title(f"step {23}")
-            #    plt.xlabel("Índice de dato")
-            #    plt.ylabel("Valor")
-            #    plt.grid(True)
-            
+            mediciones = traces[6]  # Esto tiene forma (3, 500)            
             n_pasos = traces.shape[0]
             n_values= traces.shape[1]  # Número de mediciones por paso
             n_puntos = traces.shape[2]
  
-
             # Inicializar arreglo vacío para guardar los nuevos promedios
             if n_values > 3:
                 traces_filtrados = np.empty((n_pasos, n_values-2, n_puntos))  # guardará los valores sin min/max
@@ -88,7 +80,7 @@ def plot_individual(traces,x_axis):
             else:
                 traces_av = np.average(traces, axis=1)
 
-            pasos_a_ver = [7, 8]
+            pasos_a_ver = [0, 21]
 
             for paso in pasos_a_ver:
                 plt.figure(figsize=(10, 4))
@@ -103,6 +95,7 @@ def plot_individual(traces,x_axis):
                 plt.plot(traces_av[paso], color='black', linewidth=2, label='Average withou xtremes')
                 #time= np.arange(0, 500)  # Assuming 500 time points
                 #plt.title(f'Trace stepdel paso {paso + 1}')
+                plt.ylim(0,0.2)
                 plt.xlabel("Time (arbitrary units)")
                 plt.ylabel("Signal (V)")
                 plt.legend()
@@ -117,24 +110,24 @@ def plot_individual(traces,x_axis):
             #bloques_por_paso = [traces[i] for i in range(43)]  # lista de 43 arrays (cada uno 7x500)
 
             #promedios = np.mean(traces, axis=(1, 2))  # Promedia sobre ejes 1 y 2 → resultado (43,)
-            desviaciones = np.std(traces[:, :, 300:400], axis=(1, 2), ddof=1)  # Desviación estándar de cada bloque
+            desviaciones = np.std(traces[:, :, 300:350], axis=(1, 2), ddof=1)  # Desviación estándar de cada bloque
 
             #print("largo",len(traces))
             axs[0].plot(range(500), traces_filtrados[11].T)  # Plot each averaged trace
 
             # --- Now for the second plot (average over time window) ---
             # Averages over time windows:
-            traces_av_av = np.average(traces_av[:, 180:200], axis=1)   # (45,)
-            traces_av_av2 = np.average(traces_av[:, 340:360], axis=1)  # (45,)
+            traces_av_av = np.average(traces_av[:, 300:350], axis=1)   # (45,)
+            traces_av_av2 = np.average(traces_av[:, 340:350], axis=1)  # (45,)
 
             # Error bars: std of time window 200:250 for each trace
-            traces_std = np.std(traces_av[:, 240:300], axis=1)        # (45,)
-            traces_std = np.std(traces_filtrados[:, :, 240:300] , axis=(1, 2), ddof=1)  # shape: (43,)
+            traces_std = np.std(traces_av[:, 300:350], axis=1)        # (45,)
+            traces_std = np.std(traces_filtrados[:, :, 300:350] , axis=(1, 2), ddof=1)  # shape: (43,)
 
-            traces_std2 = np.std(traces_av[:, 340:360], axis=1)        # (45,)
+            traces_std2 = np.std(traces_av[:, 300:350], axis=1)        # (45,)
 
             # Plot lines
-            axs[1].plot(x_axis, traces_av_av, label='Avg 240–300')
+            axs[1].plot(x_axis, traces_av_av2, label='Avg 240–300')
             axs[1].set_xlabel("Position (mm)")
             #axs[1].plot(x_axis, traces_av_av2, label='Avg 340–360')
 
@@ -176,11 +169,11 @@ def read_file(filename):
         if dd["type"]=="record" and dd["class"]=="oasis":
             traces = np.array(dd["data"])                      # data (for oasis) is in form of scan_step, meas_per_step, pts_traces
             print(traces.shape,filename)
-           # plot_individual(traces,x_axis)  # Plot individual traces
+            #plot_individual(traces,x_axis)  # Plot individual traces
             
             traces_av = np.average(traces, axis=1)
             #traces_av_av = np.average(traces_av[:,200:350], axis=1) 
-            traces_av_av = np.average(traces_av[:,240:300], axis=1) 
+            traces_av_av = np.average(traces_av[:,300:350], axis=1) 
 
     return(x_axis, traces_av_av)
 
@@ -194,8 +187,9 @@ def erf21(x, mu, sig):
 
 def plot_meas(scan_data):
     sd = scan_data
+    Name1=extraer_info(sd["LEFT_F"])
     fig, ax = plt.subplots()
-    ax.plot(sd["LEFT_X"], sd["LEFT_V_2"])
+    ax.plot(sd["LEFT_X"], sd["LEFT_V_2"],label=Name1)
     ax.plot(sd["RIGHT_X_2"], sd["RIGHT_V_2"])
     if sd.get("mu") is not None:
         xxx = np.linspace(-20.0, 20.0, 100)
@@ -203,10 +197,26 @@ def plot_meas(scan_data):
         ax.plot(xxx, yyy)
     if sd.get("title") is not None:
         ax.set_title(sd["title"])
-    ax.set_ylabel("FCup Current (mA)")
-    ax.set_xlabel("ITL.SLH01 - Position (mm)")
+    #ax.set_ylabel("FCup Current (mA)")
+    #ax.set_title(sd["title"])
+    ax.legend()
+
+    ax.set_xlabel("ITL.SLH01 L - Position (mm)")
     fig.show()
 
+def extraer_info(nombre_archivo):
+    nombre_archivo = nombre_archivo.upper()  # por si acaso
+    if 'LEFT' in nombre_archivo:
+        parte = nombre_archivo.split('LEFT', 1)[-1]
+    elif 'RIGHT' in nombre_archivo:
+        parte = nombre_archivo.split('RIGHT', 1)[-1]
+    else:
+        parte = ''
+    return parte.replace('.JSON', '').strip('_')
+#filenames = [
+#    "scanrecord_data_2025-07-24-10-30-20_LEFT_o2_sol_132.1.json",
+#    "scanrecord_data_2025-07-24-10-36-48_RIGHT_o2_sol_132.1.json",
+#]
 
 filenames = [
     "scanrecord_data_2025-04-28-11-10-19_ITL_SLH01_LEFT_SOL_70A.json",
@@ -242,17 +252,19 @@ filenames = [
     "scanrecord_data_2025-07-25-15-36-02_LEFT_SLIT1_10mm_SLIT2_18mm.json",
     "scanrecord_data_2025-07-25-15-42-59_RIGTH_SLIT1_10mm_SLIT2_18mm.json"
             ]
-filenames22 = [
+filenames = [
     "scanrecord_data_2025-07-25-15-22-40_LEFT_SLIT1_20mm_SLIT2_18.json",
     "scanrecord_data_2025-07-25-15-29-03_RIGHT_SLIT1_20mm_SLIT2_18.json",
     "scanrecord_data_2025-07-25-15-36-02_LEFT_SLIT1_10mm_SLIT2_18mm.json",
     "scanrecord_data_2025-07-25-15-42-59_RIGTH_SLIT1_10mm_SLIT2_18mm.json"
             ]
 
-#filenames = [
-#    "scanrecord_data_2025-07-24-10-30-20_LEFT_o2_sol_132.1.json",
-#    "scanrecord_data_2025-07-24-10-36-48_RIGHT_o2_sol_132.1.json",
-#]
+filenames= [
+"scanrecord_data_2025-07-29-11-14-40_LEFT_Vertical_0.5_-3_slit2_18_sol_115.json",
+"scanrecord_data_2025-07-29-11-08-49_RIGHT__Vertical_0.5_-3_slit2_18_sol_115.json",
+"scanrecord_data_2025-07-29-10-51-12_LEFT_Vertical_0.5_-3_slit2_18_sol_124.json",
+"scanrecord_data_2025-07-29-10-44-20_RIGHT_Vertical_0.5_-3_slit2_18_sol_124.json"
+]
 
 
 
@@ -294,13 +306,39 @@ def fusionar_y_promediar(x1, v1, x2, v2, tol=1e-8):
 BASE = ""
 d_list = [ {"LEFT_F": BASE+filenames[ii*2], "RIGHT_F": BASE+filenames[ii*2+1]} for ii in range(int(len(filenames)*0.5)) ]
 
+ii = 0
+fig, ax = plt.subplots()
+
+for dd in d_list:
+
+    xxl, VL = read_file(dd["LEFT_F"])
+    xxR, VR = read_file(dd["RIGHT_F"])
+    xxl2 = [ x for x in xxl ]  # Normalize to the first point
+    dd["MAX_V"] = 1*max( max(VL), max(VR)  )  # Average the "full out values" to get the max intensit
+    VLM=(-VL +0.5*dd["MAX_V"])
+    VRM=(VR-0.5*dd["MAX_V"])
+    Name1=extraer_info(dd["LEFT_F"])
+    Name2=extraer_info(dd["RIGHT_F"])
+    ax.plot(xxl2, VL, label=Name1,color=colores[ii])
+    ax.plot(xxR, VR,color=colores[ii])
+    ax.legend()
+    ax.set_title(dd["LEFT_F"])
+    ax.set_xlabel("ITL.SLH01 - Position (mm)")
+
+    ax.legend()
+    ii= ii + 1
+plt.show()
+
+
+
 for dd in d_list:
     xxl, VL = read_file(dd["LEFT_F"])
     xxR, VR = read_file(dd["RIGHT_F"])
-    xxl2 = [ -x -6 for x in xxl ]  # Normalize to the first point
-    xlof= [x +1 for x in xxl]
+    xxl2 = xxl
+    #[ -x -6 for x in xxl ]  # Normalize to the first point
+    xlof=[x +2.0 for x in xxl]
     dd["MAX_V"] = 1*max( max(VL), max(VR)  )  # Average the "full out values" to get the max intensit
-    VLM=2*(-VL/dd["MAX_V"] +0.5)
+    VLM=2*(-VL/dd["MAX_V"] +0.5-0.065)
     VRM=2*(VR/dd["MAX_V"]-0.5)
     fig, ax = plt.subplots()
 
@@ -391,8 +429,8 @@ for dd in d_list:
     #ax.plot(xx, erf2(xx, mu_fit,sig_fit))
     #, 'g--', label='fit: a=%5.3f, b=%5.3f, c=%5.3f' % tuple(popt))
     #ax.plot(xx, erf2(xx, *popt), color='red', label='Ajuste')
-fits = {"mu":-1.5, "sig": 16.0, "Am": -0.16, "A0":0.30, "title":"LEFT-RIGHT ITL.SLH01 - ITL.SOL01=70A"}    
-d_list[0].update(fits)
+#fits = {"mu":-1.5, "sig": 16.0, "Am": -0.16, "A0":0.30, "title":"LEFT-RIGHT ITL.SLH01 - ITL.SOL01=70A"}    
+#d_list[0].update(fits)
 #fits = {"mu":-4.5, "sig": 16.0, "Am": -0.16, "A0":0.30, "title":"LEFT-RIGHT ITL.SLH01 - ITL.SOL01=75A"}    
 #d_list[1].update(fits)
 
