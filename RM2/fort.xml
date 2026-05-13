@@ -1,0 +1,8 @@
+ <seq>
+<element id="FIT:" type="fit" s="      234.040*mm" l= "0">
+ <optr>call FIT(   1,   6,   5,        0.000,        1.000,   1)</optr>
+</element>
+
+<element id="endOfSequence" type="marker" s="  234.040*mm" l="0">
+ </element>
+</seq>

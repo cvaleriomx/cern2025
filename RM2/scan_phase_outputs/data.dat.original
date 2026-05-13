@@ -1,0 +1,20 @@
+3.000e-2 0 0 938.2720813 1 0.0 !Energy for mass 1 = 27944.83, mass 1= 13041.00, working Ein = 5.00e-2
+ -1 5 0.01 5.e-6                   ! iprint, 5=sp.charge, initial RK step, RK error tol.
+ 0     0.00      1.        1.      -3255.8       0.0   -1083.92  ! no Bz field; cyc centre coord for fort.3
+ 0.05E-01 00.00E-03 0.05E-01 1.00E-03 0.10 0.01 ! bunch dim: x,x',y,y',z(bun. len.),dp/p
+ 1. 1. 1. 1. 1. 1. 1. 1.          ! 1 means x,y,z in cm, x',y',dp/p in rad (dimensionless)
+ 0                                       !number of correl. params (GUI needs this line)
+ 11 ! Number of parameters that will be passed into common block
+ 0.06 0.002 0.0704 	0	! Vane_voltage	.	MV
+ -90.0 -360.0 360.0    	0	! Phase		.	Deg
+ 2.39  -10.0  20.0     	0	! Alpha_x	axu	1
+ 31.5   0.0   180.0    	0	! Beta_x	bxu	cm
+ 3e-5 	0.0   100.0	0	! Emittance_x	exu	cm.rad
+ 2.70  -10.0  20.0     	0	! Alpha_y	ayu	1
+ 33.6   0.0   180.0    	0	! Beta_y	byu	cm
+ 3e-5	0.0   100.0	0	! Emittance_y	eyu	cm.rad
+ 0.001  -200.  300.    	0	! Alpha_z	azu	1
+ 12.27  0.0   200.     	0	! Beta_z	bzu	cm
+ 4.9e-5 0.0   10.0     	0  	! Emittance_z	ezu	cm.rad
+ 1.E-4 900 		!hack - 1e-4 is an epsilon convergence factor, 900 is max iterations 
+ 1 .0 0.9 20 		! hack - have to do with optimization routine - file parsed in main.f
